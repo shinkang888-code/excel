@@ -1,9 +1,12 @@
 import { GoogleConnectionBanner } from "@/components/auth/GoogleConnectionBanner";
 import { ConversionJobTable } from "@/components/dashboard/ConversionJobTable";
 import { UploadWizard } from "@/components/upload/UploadWizard";
-import { mockJobs, sampleCompatibilitySummary } from "@/lib/mock-data";
+import { getDashboardJobs } from "@/lib/conversion-jobs";
+import { sampleCompatibilitySummary } from "@/lib/mock-data";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const jobs = await getDashboardJobs();
+
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 px-6 py-10 lg:px-10">
       <section className="flex flex-wrap items-end justify-between gap-4">
@@ -36,7 +39,7 @@ export default function DashboardPage() {
       </section>
 
       <UploadWizard />
-      <ConversionJobTable jobs={mockJobs} />
+      <ConversionJobTable jobs={jobs} />
     </main>
   );
 }

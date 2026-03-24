@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { FileUp, FolderSync, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import { requestConversion, uploadWorkbook } from "@/lib/api";
 
@@ -14,24 +15,40 @@ const steps = [
 ];
 
 export function UploadWizard() {
+  const router = useRouter();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [step, setStep] = useState(1);
   const [jobId, setJobId] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [phase, setPhase] = useState<"idle" | "uploading" | "analyzing" | "done">(
+    "idle",
+  );
 
   const uploadMutation = useMutation({
     mutationFn: uploadWorkbook,
-    onSuccess: (data) => {
-      setJobId(data.jobId);
-      setStep(3);
-    },
   });
 
   const convertMutation = useMutation({
     mutationFn: requestConversion,
-    onSuccess: () => {
-      setStep(4);
-    },
   });
+
+  useEffect(() => {
+    if (phase === "uploading" && uploadMutation.isPending) {
+      const timer = window.setInterval(() => {
+        setProgress((prev) => Math.min(prev + 4, 65));
+      }, 280);
+
+      return () => window.clearInterval(timer);
+    }
+
+    if (phase === "analyzing" && convertMutation.isPending) {
+      const timer = window.setInterval(() => {
+        setProgress((prev) => Math.min(prev + 3, 95));
+      }, 280);
+
+      return () => window.clearInterval(timer);
+    }
+  }, [convertMutation.isPending, phase, uploadMutation.isPending]);
 
   const helperText = useMemo(() => {
     if (!selectedFile) {
@@ -48,6 +65,15 @@ export function UploadWizard() {
 
     return `${selectedFile.name} 선택됨. 업로드를 눌러 분석을 시작하세요.`;
   }, [jobId, selectedFile, uploadMutation.isPending]);
+
+  const progressDescription =
+    phase === "uploading"
+      ? "업로드 진행 중"
+      : phase === "analyzing"
+        ? "구조 분석 및 변환 준비 중"
+        : phase === "done"
+          ? "완료"
+          : "대기 중";
 
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -100,6 +126,8 @@ export function UploadWizard() {
             if (file) {
               setStep(1);
               setJobId(null);
+              setProgress(0);
+              setPhase("idle");
             }
           }}
         />
@@ -126,7 +154,23 @@ export function UploadWizard() {
               return;
             }
 
-            void uploadMutation.mutateAsync(selectedFile);
+            setStep(2);
+            setPhase("uploading");
+            setProgress(5);
+
+            void uploadMutation
+              .mutateAsync(selectedFile)
+              .then((data) => {
+                setJobId(data.jobId);
+                setStep(3);
+                setProgress(70);
+                setPhase("idle");
+                router.refresh();
+              })
+              .catch(() => {
+                setPhase("idle");
+                setProgress(0);
+              });
           }}
           disabled={!selectedFile || uploadMutation.isPending}
           className="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
@@ -141,7 +185,20 @@ export function UploadWizard() {
               return;
             }
 
-            void convertMutation.mutateAsync(jobId);
+            setPhase("analyzing");
+            setProgress((prev) => Math.max(prev, 72));
+
+            void convertMutation
+              .mutateAsync(jobId)
+              .then(() => {
+                setStep(4);
+                setProgress(100);
+                setPhase("done");
+                router.refresh();
+              })
+              .catch(() => {
+                setPhase("idle");
+              });
           }}
           disabled={!jobId || convertMutation.isPending}
           className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-5 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
@@ -152,6 +209,21 @@ export function UploadWizard() {
             : "Google Sheets 생성 준비"}
         </button>
       </div>
+
+      {progress > 0 && (
+        <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="mb-2 flex items-center justify-between text-sm">
+            <p className="font-medium text-slate-700">{progressDescription}</p>
+            <p className="font-semibold text-slate-900">{progress}%</p>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+            <div
+              className="h-full rounded-full bg-blue-600 transition-all duration-300 ease-out"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {(uploadMutation.error || convertMutation.error || jobId) && (
         <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">

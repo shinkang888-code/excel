@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { ConversionReport } from "@/components/convert/ConversionReport";
-import { mockJobs } from "@/lib/mock-data";
+import { getConversionJobById } from "@/lib/conversion-jobs";
 import { formatPercent } from "@/lib/utils";
 
 export default async function ConvertDetailPage({
@@ -10,7 +11,11 @@ export default async function ConvertDetailPage({
   params: Promise<{ jobId: string }>;
 }) {
   const { jobId } = await params;
-  const job = mockJobs.find((item) => item.id === jobId) ?? mockJobs[0];
+  const job = await getConversionJobById(jobId);
+
+  if (!job) {
+    notFound();
+  }
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-6 py-10 lg:px-10">
@@ -25,14 +30,24 @@ export default async function ConvertDetailPage({
         </p>
 
         <div className="mt-6 flex flex-wrap gap-3">
-          <a
-            href={job.googleSheetUrl ?? "#"}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
-          >
-            Google Sheets 열기
-          </a>
+          {job.googleSheetUrl ? (
+            <a
+              href={job.googleSheetUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+            >
+              Google Sheets 열기
+            </a>
+          ) : (
+            <button
+              type="button"
+              disabled
+              className="inline-flex items-center justify-center rounded-full bg-slate-300 px-5 py-3 text-sm font-medium text-slate-600"
+            >
+              Google Sheets 링크 준비 중
+            </button>
+          )}
           <Link
             href="/dashboard"
             className="inline-flex items-center justify-center rounded-full border border-slate-300 px-5 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
@@ -40,6 +55,12 @@ export default async function ConvertDetailPage({
             대시보드로 돌아가기
           </Link>
         </div>
+        {!job.googleSheetUrl && (
+          <p className="mt-3 text-sm text-slate-500">
+            아직 Google Sheets URL이 생성되지 않았습니다. 변환 상태가 success 또는
+            partial_success인지 확인해 주세요.
+          </p>
+        )}
       </section>
 
       <section className="grid gap-4 md:grid-cols-2">

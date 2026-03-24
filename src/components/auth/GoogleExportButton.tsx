@@ -1,32 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { FolderSync } from "lucide-react";
 
+import { createSupabaseBrowserClient } from "@/lib/supabaseClient";
+import { googleScopes } from "@/lib/google";
+
 export function GoogleExportButton() {
-  const [status, setStatus] = useState<"idle" | "requesting" | "done">("idle");
+  const [status, setStatus] = useState<"idle" | "requesting">("idle");
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   async function handleAuthorize() {
     setStatus("requesting");
 
-    const response = await fetch("/api/google/authorize", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        code: "demo-authorization-code",
-        state: "local-demo",
-      }),
-    });
-
-    if (!response.ok) {
+    if (!supabase) {
+      window.alert("Supabase 환경 변수가 없어 Google 연결을 진행할 수 없습니다.");
       setStatus("idle");
-      window.alert("Google 권한 연결에 실패했습니다.");
       return;
     }
 
-    setStatus("done");
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/dashboard`,
+        scopes: googleScopes.export.join(" "),
+        queryParams: {
+          access_type: "offline",
+          prompt: "consent",
+          include_granted_scopes: "true",
+        },
+      },
+    });
+
+    if (error) {
+      setStatus("idle");
+      window.alert(error.message);
+      return;
+    }
   }
 
   return (
@@ -38,7 +48,6 @@ export function GoogleExportButton() {
       <FolderSync className="h-4 w-4" />
       {status === "idle" && "Google Drive 연결"}
       {status === "requesting" && "권한 요청 중..."}
-      {status === "done" && "연결 완료"}
     </button>
   );
 }
