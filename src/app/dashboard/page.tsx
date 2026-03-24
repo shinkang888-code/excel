@@ -3,8 +3,19 @@ import { ConversionJobTable } from "@/components/dashboard/ConversionJobTable";
 import { UploadWizard } from "@/components/upload/UploadWizard";
 import { getDashboardJobs } from "@/lib/conversion-jobs";
 import { sampleCompatibilitySummary } from "@/lib/mock-data";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 
 export default async function DashboardPage() {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
+
+  if (!user) {
+    redirect("/login");
+  }
+
   const jobs = await getDashboardJobs();
 
   return (

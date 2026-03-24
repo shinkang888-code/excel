@@ -167,9 +167,16 @@ export function UploadWizard() {
                 setPhase("idle");
                 router.refresh();
               })
-              .catch(() => {
+              .catch((error: unknown) => {
                 setPhase("idle");
                 setProgress(0);
+                if (
+                  error instanceof Error &&
+                  error.message.includes("로그인이 필요합니다")
+                ) {
+                  window.alert("세션이 만료되었습니다. 다시 로그인해 주세요.");
+                  router.push("/login");
+                }
               });
           }}
           disabled={!selectedFile || uploadMutation.isPending}
@@ -196,8 +203,15 @@ export function UploadWizard() {
                 setPhase("done");
                 router.refresh();
               })
-              .catch(() => {
+              .catch((error: unknown) => {
                 setPhase("idle");
+                if (
+                  error instanceof Error &&
+                  error.message.includes("로그인이 필요합니다")
+                ) {
+                  window.alert("세션이 만료되었습니다. 다시 로그인해 주세요.");
+                  router.push("/login");
+                }
               });
           }}
           disabled={!jobId || convertMutation.isPending}

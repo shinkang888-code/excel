@@ -26,6 +26,13 @@ export function GoogleSignInButton() {
 
     if (error) {
       setLoading(false);
+      if (error.message.includes("Unsupported provider")) {
+        window.alert(
+          "Google 로그인 설정이 비활성화되어 있습니다. Supabase Dashboard > Authentication > Providers > Google을 활성화해 주세요.",
+        );
+        return;
+      }
+
       window.alert(error.message);
     }
   }

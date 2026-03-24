@@ -34,7 +34,7 @@ export default function HomePage() {
         </div>
         <Link
           href="/login"
-          className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+          className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-sm font-medium !text-white transition hover:bg-slate-800 [&_svg]:!text-white"
         >
           Google로 시작
           <ArrowRight className="h-4 w-4" />
@@ -59,7 +59,7 @@ export default function HomePage() {
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href="/dashboard"
-              className="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+              className="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-3 text-sm font-medium !text-white transition hover:bg-slate-800 [&_svg]:!text-white"
             >
               대시보드 보기
             </Link>

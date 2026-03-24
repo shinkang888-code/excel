@@ -34,6 +34,13 @@ export function GoogleExportButton() {
 
     if (error) {
       setStatus("idle");
+      if (error.message.includes("Unsupported provider")) {
+        window.alert(
+          "Google Drive 연결이 비활성화되어 있습니다. Supabase Dashboard > Authentication > Providers > Google을 먼저 활성화해 주세요.",
+        );
+        return;
+      }
+
       window.alert(error.message);
       return;
     }
