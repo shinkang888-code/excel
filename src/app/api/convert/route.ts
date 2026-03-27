@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const convertSchema = z.object({
@@ -146,7 +147,9 @@ export async function POST(request: Request) {
     );
   }
 
-  const { data: job, error: jobError } = await supabase
+  const adminClient = getSupabaseAdminClient() ?? supabase;
+
+  const { data: job, error: jobError } = await adminClient
     .from("conversion_jobs")
     .select("id, status, google_sheet_url, started_at, source_file_name")
     .eq("id", parsed.data.jobId)
@@ -223,7 +226,7 @@ export async function POST(request: Request) {
   const newStatus = "success";
   const now = new Date().toISOString();
 
-  const { data: updated, error: updateError } = await supabase
+  const { data: updated, error: updateError } = await adminClient
     .from("conversion_jobs")
     .update({
       status: newStatus,

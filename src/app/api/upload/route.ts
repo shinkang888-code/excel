@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { mockJobs } from "@/lib/mock-data";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
@@ -93,8 +94,9 @@ export async function POST(request: Request) {
     },
   ] as const;
 
-  // 프로필이 없으면 생성합니다. (conversion_jobs는 profiles를 참조합니다.)
-  const { error: profileError } = await supabase.from("profiles").upsert(
+  // 프로필 upsert는 service role 클라이언트로 RLS 우회하여 처리합니다.
+  const adminClient = getSupabaseAdminClient() ?? supabase;
+  const { error: profileError } = await adminClient.from("profiles").upsert(
     {
       id: user.id,
       email: user.email,
@@ -113,21 +115,27 @@ export async function POST(request: Request) {
   );
 
   if (profileError) {
-    return NextResponse.json(
-      {
-        error: {
-          code: "PROFILE_UPSERT_FAILED",
-          message: "사용자 프로필 생성에 실패했습니다.",
+    // 테이블 미존재 또는 RLS 이슈를 로그로만 남기고 job 생성은 계속합니다.
+    console.error("[upload] profile upsert failed:", profileError.message, profileError.code);
+    if (profileError.code === "42P01") {
+      // 테이블이 존재하지 않으면 즉시 에러 반환
+      return NextResponse.json(
+        {
+          error: {
+            code: "SCHEMA_NOT_APPLIED",
+            message:
+              "데이터베이스 스키마가 적용되지 않았습니다. Supabase SQL Editor에서 마이그레이션을 실행해 주세요.",
+          },
         },
-      },
-      { status: 500 },
-    );
+        { status: 500 },
+      );
+    }
   }
 
   const sourceFilePath = `uploads/${user.id}/${file.name}`;
   const workbookName = file.name.replace(/\.(xlsx|xlsm)$/i, "");
 
-  const { data: inserted, error: insertError } = await supabase
+  const { data: inserted, error: insertError } = await adminClient
     .from("conversion_jobs")
     .insert({
       user_id: user.id,

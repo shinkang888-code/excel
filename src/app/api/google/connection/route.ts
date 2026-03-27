@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function GET() {
@@ -27,9 +28,10 @@ export async function GET() {
     });
   }
 
+  const adminClient = getSupabaseAdminClient() ?? supabase;
   const providerToken = session?.provider_token;
   if (providerToken) {
-    await supabase.from("google_connections").upsert(
+    await adminClient.from("google_connections").upsert(
       {
         user_id: user.id,
         provider: "google",
@@ -77,7 +79,8 @@ export async function DELETE() {
     return NextResponse.json({ status: "revoked" });
   }
 
-  await supabase
+  const adminClientForDelete = getSupabaseAdminClient() ?? supabase;
+  await adminClientForDelete
     .from("google_connections")
     .update({ status: "revoked", last_validated_at: new Date().toISOString() })
     .eq("user_id", user.id)

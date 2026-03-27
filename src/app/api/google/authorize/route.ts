@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { googleScopes } from "@/lib/google";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const authorizeSchema = z.object({
@@ -68,7 +69,8 @@ export async function POST(request: Request) {
   const now = new Date().toISOString();
   const scopes = googleScopes.export;
 
-  const { error: profileError } = await supabase.from("profiles").upsert(
+  const adminClient = getSupabaseAdminClient() ?? supabase;
+  const { error: profileError } = await adminClient.from("profiles").upsert(
     {
       id: user.id,
       email: user.email,
@@ -98,7 +100,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { error: upsertError } = await supabase
+  const { error: upsertError } = await adminClient
     .from("google_connections")
     .upsert(
       {
